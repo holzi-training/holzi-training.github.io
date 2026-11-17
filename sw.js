@@ -1,7 +1,7 @@
 // Offline-Speicher: lädt immer zuerst die neueste Version aus dem Netz,
 // fällt ohne Netz (oder nach 3 Sekunden) auf die gespeicherte Kopie zurück.
 // Bei Änderungen an der App die Versionsnummer erhöhen.
-var CACHE = 'trainingstagebuch-v1';
+var CACHE = 'trainingstagebuch-v2';
 var FILES = [
   './',
   './index.html',
@@ -12,7 +12,9 @@ var FILES = [
 ];
 
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); }));
+  e.waitUntil(caches.open(CACHE).then(function (c) {
+    return c.addAll(FILES.map(function (f) { return new Request(f, { cache: 'no-cache' }); }));
+  }).then(function () { return self.skipWaiting(); }));
 });
 
 self.addEventListener('activate', function (e) {
@@ -35,7 +37,8 @@ self.addEventListener('fetch', function (e) {
     var done = false;
     function finish(r) { if (!done && r) { done = true; resolve(r); } }
     var timer = setTimeout(function () { fromCache().then(finish); }, 3000);
-    fetch(req).then(function (res) {
+    // 'no-cache': immer beim Server nachfragen, damit Updates sofort ankommen
+    fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }).then(function (res) {
       clearTimeout(timer);
       if (res && res.ok) {
         var copy = res.clone();

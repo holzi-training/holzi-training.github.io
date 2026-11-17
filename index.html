@@ -370,7 +370,14 @@
     }
     return normalize(s);
   }
+  // Speichert lokal; merkt sich, welche Einträge sich geändert haben (für den Abgleich)
+  // und stößt danach den Abgleich mit den eigenen Geräten an.
   function save() {
+    stampChanges();
+    writeLocal();
+    scheduleSync();
+  }
+  function writeLocal() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
     catch (e) { alert('Speichern fehlgeschlagen: ' + e.message); }
   }
@@ -808,7 +815,8 @@
       (state.lastBackup ? ' Letzte Sicherung: ' + fmtDate(state.lastBackup) + '.' : ' Noch keine Sicherung.') + '</p>' +
       '<div class="row wrap"><button class="btn" data-act="export">Exportieren</button>' +
       '<button class="btn" data-act="import">Importieren</button>' +
-      '<input type="file" id="import-file" accept="application/json,.json" hidden></div></div>';
+      '<input type="file" id="import-file" accept="application/json,.json" hidden></div></div>' +
+      syncCard();
     view.innerHTML = h;
   }
 
@@ -819,6 +827,8 @@
     var hasData = state.logs.some(function (l) { return validSets(l).length; }) || Object.keys(state.body).length;
     var today = iso(new Date());
     if (!hasData || (state.backupSnooze && state.backupSnooze > today)) return '';
+    // Mit aktiver Geräte-Verbindung liegt ohnehin eine Kopie bei GitHub
+    if (sync.token && sync.last && Date.now() - sync.last < BACKUP_DAYS * 864e5) return '';
     var since = daysSince(state.lastBackup || state.backupBase);
     if (since < BACKUP_DAYS) return '';
     return '<div class="card" style="border-color:var(--plan)"><b>Zeit für eine Sicherung</b>' +
@@ -853,6 +863,248 @@
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
       markBackup();
     }
+  }
+
+  // ----- Geräte verbinden (optional, über ein geheimes Gist im eigenen GitHub-Konto) -----
+  // Jeder Eintrag (Übung, Training, Kalendertag, Körpergewicht) bekommt in state.meta einen
+  // Zeitstempel der letzten Änderung. Beim Abgleich gewinnt pro Eintrag die neuere Version;
+  // gelöschte Einträge behalten ihren Zeitstempel, damit die Löschung ankommt.
+  var SYNC_KEY = 'trainingstagebuch.sync';   // getrennt vom Datenspeicher: landet nie im Export
+  var GIST_FILE = 'trainingstagebuch.json';
+  var GIST_DESC = 'Trainingstagebuch Sync – bitte nicht löschen';
+  var sync = loadSync();
+  var shadow = snapshot(state);
+  var syncBusy = false, syncAgain = false, syncTimer = null, pendingRender = false;
+
+  function loadSync() {
+    try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; } catch (e) { return {}; }
+  }
+  function saveSync() {
+    try { localStorage.setItem(SYNC_KEY, JSON.stringify(sync)); } catch (e) {}
+  }
+  function recordMap(s) {
+    var m = {};
+    (s.exercises || []).forEach(function (e) { m['e:' + e.id] = e; });
+    (s.logs || []).forEach(function (l) { m['l:' + l.id] = l; });
+    Object.keys(s.trained || {}).forEach(function (d) { m['t:' + d] = s.trained[d]; });
+    Object.keys(s.body || {}).forEach(function (d) { m['b:' + d] = s.body[d]; });
+    return m;
+  }
+  function snapshot(s) {
+    var m = recordMap(s), o = {};
+    Object.keys(m).forEach(function (k) { o[k] = JSON.stringify(m[k]); });
+    return o;
+  }
+  function stampChanges() {
+    var cur = snapshot(state), now = Date.now();
+    state.meta = state.meta || {};
+    Object.keys(Object.assign({}, cur, shadow)).forEach(function (k) {
+      if (cur[k] !== shadow[k]) state.meta[k] = now;
+    });
+    shadow = cur;
+  }
+  function sortedObj(o) {
+    var r = {};
+    Object.keys(o || {}).sort().forEach(function (k) { r[k] = o[k]; });
+    return r;
+  }
+  // Der Teil der Daten, der zwischen Geräten abgeglichen wird, in fester Reihenfolge
+  function canon(s) {
+    return {
+      v: 1,
+      catalog: s.catalog || 0,
+      backupBase: s.backupBase || '',
+      lastBackup: s.lastBackup || '',
+      exercises: s.exercises || [],
+      logs: (s.logs || []).slice().sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }),
+      trained: sortedObj(s.trained),
+      body: sortedObj(s.body),
+      meta: sortedObj(s.meta)
+    };
+  }
+  // Vorbelegte Übungen haben auf jedem Gerät eine eigene ID. Gleich heißende Übungen
+  // bekommen hier die ID aus dem gemeinsamen Stand, damit keine Doppelten entstehen.
+  function adoptRemoteIds(local, remote) {
+    var localIds = {}, remoteIds = {}, remoteByName = {};
+    local.exercises.forEach(function (e) { localIds[e.id] = true; });
+    (remote.exercises || []).forEach(function (e) { remoteIds[e.id] = true; });
+    (remote.exercises || []).forEach(function (e) {
+      if (!localIds[e.id]) remoteByName[e.name.toLowerCase()] = e.id;
+    });
+    local.meta = local.meta || {};
+    local.exercises.forEach(function (e) {
+      if (remoteIds[e.id]) return;
+      var rid = remoteByName[e.name.toLowerCase()];
+      if (!rid || localIds[rid]) return;
+      var old = e.id;
+      e.id = rid; localIds[rid] = true; delete remoteByName[e.name.toLowerCase()];
+      local.logs.forEach(function (l) { if (l.exId === old) l.exId = rid; });
+      if (local.meta['e:' + old]) {
+        local.meta['e:' + rid] = Math.max(local.meta['e:' + rid] || 0, local.meta['e:' + old]);
+        delete local.meta['e:' + old];
+      }
+      if (ui.exId === old) ui.exId = rid;
+    });
+  }
+  function mergeStates(localIn, remote) {
+    var local = JSON.parse(JSON.stringify(localIn));
+    adoptRemoteIds(local, remote);
+    var L = recordMap(local), R = recordMap(remote);
+    var lm = local.meta || {}, rm = remote.meta || {};
+    var keys = Object.keys(Object.assign({}, L, R, lm, rm));
+    var pick = {}, meta = {};
+    keys.forEach(function (k) {
+      var tl = lm[k] || 0, tr = rm[k] || 0;
+      var v = tr > tl ? R[k] : tl > tr ? L[k] : (k in L ? L[k] : R[k]);
+      if (tl || tr) meta[k] = Math.max(tl, tr);
+      if (v !== undefined) pick[k] = v;
+    });
+    var exercises = [], seen = {};
+    local.exercises.concat(remote.exercises || []).forEach(function (e) {
+      var k = 'e:' + e.id;
+      if (!seen[k] && pick[k]) { seen[k] = true; exercises.push(pick[k]); }
+    });
+    var logs = [], trained = {}, body = {};
+    Object.keys(pick).forEach(function (k) {
+      var id = k.slice(2);
+      if (k[0] === 'l') logs.push(pick[k]);
+      else if (k[0] === 't') trained[id] = pick[k];
+      else if (k[0] === 'b') body[id] = pick[k];
+    });
+    var out = Object.assign({}, local, {
+      exercises: exercises, logs: logs, trained: trained, body: body, meta: meta,
+      catalog: Math.max(local.catalog || 0, remote.catalog || 0),
+      backupBase: [local.backupBase, remote.backupBase].filter(Boolean).sort()[0] || local.backupBase,
+      lastBackup: [local.lastBackup, remote.lastBackup].filter(Boolean).sort().pop() || undefined
+    });
+    return JSON.parse(JSON.stringify(out));
+  }
+
+  function gh(method, path, body) {
+    return fetch('https://api.github.com' + path, {
+      method: method,
+      cache: 'no-store',
+      headers: {
+        'Authorization': 'Bearer ' + sync.token,
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) {
+      if (!r.ok) { var e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
+      return r.status === 204 ? null : r.json();
+    });
+  }
+  function readGistFile(gist) {
+    var f = gist && gist.files && gist.files[GIST_FILE];
+    if (!f) return Promise.resolve(null);
+    var text = f.truncated
+      ? fetch(f.raw_url, { cache: 'no-store' }).then(function (r) { return r.text(); })
+      : Promise.resolve(f.content);
+    return text.then(function (t) {
+      if (!t || !t.trim()) return null;
+      var s = JSON.parse(t);
+      return s && Array.isArray(s.exercises) && Array.isArray(s.logs) ? s : null;
+    });
+  }
+  function syncErrorText(e) {
+    if (e && (e.status === 401 || e.status === 403)) return 'Der Schlüssel ist ungültig, abgelaufen oder hat kein Gist-Recht.';
+    if (e && e.status === 404) return 'Die Sync-Notiz bei GitHub wurde nicht gefunden. Bitte trennen und neu verbinden.';
+    if (e && e.status) return 'GitHub antwortet mit Fehler ' + e.status + '. Es wird später erneut versucht.';
+    return 'Keine Internetverbindung. Der Abgleich wird nachgeholt.';
+  }
+  function isTyping() {
+    var a = document.activeElement;
+    return !!(a && view.contains(a) && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName));
+  }
+  function scheduleSync() {
+    if (!sync.token || !sync.gistId) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncNow, 2500);
+  }
+  function syncNow() {
+    if (!sync.token || !sync.gistId) return Promise.resolve();
+    if (syncBusy) { syncAgain = true; return Promise.resolve(); }
+    clearTimeout(syncTimer);
+    syncBusy = true;
+    updateSyncStatus('Gleiche ab …');
+    return gh('GET', '/gists/' + sync.gistId).then(readGistFile).then(function (remote) {
+      var merged = remote ? mergeStates(state, remote) : JSON.parse(JSON.stringify(state));
+      var mergedText = JSON.stringify(canon(merged));
+      if (mergedText !== JSON.stringify(canon(state))) {
+        state = merged;
+        shadow = snapshot(state);
+        writeLocal();
+        if (isTyping()) pendingRender = true; else render();
+      }
+      if (!remote || mergedText !== JSON.stringify(canon(remote))) {
+        var files = {}; files[GIST_FILE] = { content: mergedText };
+        return gh('PATCH', '/gists/' + sync.gistId, { files: files });
+      }
+    }).then(function () {
+      sync.last = Date.now(); sync.error = ''; saveSync();
+    }).catch(function (e) {
+      sync.error = syncErrorText(e); saveSync();
+    }).then(function () {
+      syncBusy = false;
+      updateSyncStatus();
+      if (syncAgain) { syncAgain = false; syncNow(); }
+    });
+  }
+  function connectSync(token) {
+    token = (token || '').trim();
+    if (!token) { alert('Bitte zuerst den Schlüssel von GitHub einfügen.'); return; }
+    sync = { token: token };
+    updateSyncStatus('Verbinde …');
+    gh('GET', '/user').then(function (u) {
+      sync.login = u.login;
+      return gh('GET', '/gists?per_page=100');
+    }).then(function (list) {
+      var found = (list || []).find(function (g) { return g.description === GIST_DESC && g.files && g.files[GIST_FILE]; });
+      if (found) return found.id;
+      var files = {}; files[GIST_FILE] = { content: JSON.stringify(canon(state)) };
+      return gh('POST', '/gists', { description: GIST_DESC, public: false, files: files }).then(function (g) { return g.id; });
+    }).then(function (id) {
+      sync.gistId = id; saveSync();
+      return syncNow();
+    }).then(function () {
+      if (ui.tab === 'uebungen' && !isTyping()) render();
+    }).catch(function (e) {
+      var msg = syncErrorText(e);
+      sync = {}; saveSync();
+      if (ui.tab === 'uebungen') render();
+      alert('Verbinden fehlgeschlagen: ' + msg);
+    });
+  }
+  function fmtTime(ms) {
+    var d = new Date(ms);
+    return fmtDate(iso(d)) + ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ' Uhr';
+  }
+  function syncStatusText() {
+    if (sync.error) return sync.error;
+    return sync.last ? 'Zuletzt abgeglichen: ' + fmtTime(sync.last) : 'Noch nicht abgeglichen.';
+  }
+  function updateSyncStatus(text) {
+    var el = document.getElementById('sync-status');
+    if (el) el.textContent = text || syncStatusText();
+  }
+  function syncCard() {
+    var h = '<div class="card"><h2>Eigene Geräte verbinden (optional)</h2>';
+    if (sync.token && sync.gistId) {
+      h += '<p class="small" style="margin:6px 0 4px">Verbunden mit GitHub' + (sync.login ? ' (' + esc(sync.login) + ')' : '') +
+        '. Änderungen werden automatisch mit deinen anderen verbundenen Geräten abgeglichen.</p>' +
+        '<p class="muted small" id="sync-status" style="margin:0 0 10px">' + esc(syncStatusText()) + '</p>' +
+        '<div class="row wrap"><button class="btn primary" data-act="sync-now">Jetzt abgleichen</button>' +
+        '<button class="btn danger" data-act="sync-disconnect">Trennen</button></div>';
+    } else {
+      h += '<p class="muted small" style="margin:6px 0 10px">Nur nötig, wenn du deine Einträge zwischen mehreren eigenen Geräten ' +
+        '(z. B. Handy und PC) abgleichen willst. Dafür brauchst du einen GitHub-Schlüssel, der nur das Recht „gist“ hat. ' +
+        'Gib ihn auf jedem Gerät ein, das verbunden sein soll.</p>' +
+        '<div class="row"><input type="password" id="sync-token" class="grow" autocomplete="off" autocapitalize="off" spellcheck="false" ' +
+        'placeholder="GitHub-Schlüssel (ghp_…)" aria-label="GitHub-Schlüssel">' +
+        '<button class="btn primary" data-act="sync-connect">Verbinden</button></div>';
+    }
+    return h + '</div>';
   }
 
   // ----- Körpergewicht -----
@@ -979,6 +1231,18 @@
     } else if (act === 'import') {
       document.getElementById('import-file').click();
       return;
+    } else if (act === 'sync-connect') {
+      connectSync(document.getElementById('sync-token').value);
+      return;
+    } else if (act === 'sync-now') {
+      syncNow();
+      return;
+    } else if (act === 'sync-disconnect') {
+      if (!confirm('Dieses Gerät trennen? Deine Einträge bleiben hier und bei GitHub erhalten, werden aber nicht mehr abgeglichen.')) return;
+      clearTimeout(syncTimer);
+      sync = {}; saveSync();
+      render();
+      return;
     } else return;
     save();
     render();
@@ -1019,8 +1283,9 @@
   });
 
   view.addEventListener('keydown', function (ev) {
-    if (ev.key !== 'Enter' || (ev.target.id !== 'new-ex' && ev.target.id !== 'body-w')) return;
-    var b = view.querySelector(ev.target.id === 'body-w' ? '[data-act="body-save"]' : '[data-act="new-ex-add"], [data-act="new-ex"]');
+    var target = { 'body-w': '[data-act="body-save"]', 'sync-token': '[data-act="sync-connect"]', 'new-ex': '[data-act="new-ex-add"], [data-act="new-ex"]' }[ev.target.id];
+    if (ev.key !== 'Enter' || !target) return;
+    var b = view.querySelector(target);
     if (b) b.click();
   });
 
@@ -1031,6 +1296,18 @@
   });
 
   render();
+
+  // Abgleich mit den eigenen Geräten: beim Start, beim Zurückkehren in die App und wenn wieder Netz da ist
+  syncNow();
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) syncNow(); });
+  window.addEventListener('online', function () { syncNow(); });
+  // Neu gezeichnet wird erst, wenn niemand mehr in einem Feld tippt
+  view.addEventListener('focusout', function () {
+    setTimeout(function () { if (pendingRender && !isTyping()) { pendingRender = false; render(); } }, 0);
+  });
+  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+    window.__tt = { mergeStates: mergeStates, canon: canon, syncNow: syncNow, getState: function () { return state; } };
+  }
 
   // Offline-Betrieb und Installation als App (nur über http/https möglich)
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

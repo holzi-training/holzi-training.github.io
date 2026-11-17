@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trainingstagebuch</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#1a1d23">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Training">
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --surface: #ffffff;
+    --surface-2: #eceef2;
+    --text: #15181d;
+    --muted: #626a76;
+    --border: #d9dde3;
+    --accent: #1f6fd6;
+    --accent-ink: #ffffff;
+    --accent-soft: #dfeafa;
+    --good: #1c7c4a;
+    --danger: #b3322b;
+    --grid: #e3e6eb;
+    --plan: #e8901c;
+    --sil: #aeb5c0;
+    --body: #e1e5ea;
+    --muscle: #d6453d;
+    --muscle-2: #f0b3ae;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101216;
+      --surface: #1a1d23;
+      --surface-2: #242830;
+      --text: #eef0f3;
+      --muted: #9aa2ae;
+      --border: #313640;
+      --accent: #5b9df0;
+      --accent-ink: #0b1220;
+      --accent-soft: #1d2c44;
+      --good: #4fbf85;
+      --danger: #ef7a72;
+      --grid: #2a2e37;
+      --plan: #f2a13c;
+      --sil: #2d323c;
+      --body: #586071;
+      --muscle: #f0736b;
+      --muscle-2: #7d3f3b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 1.35rem; margin: 4px 0 14px; }
+  h2 { font-size: 1.05rem; margin: 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: .875rem; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row.wrap { flex-wrap: wrap; }
+  .grow { flex: 1 1 auto; min-width: 0; }
+  .spread { justify-content: space-between; }
+  button, input, select { font: inherit; color: inherit; }
+  input[type=text], input[type=date], select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 10px;
+    min-height: 42px;
+    width: 100%;
+  }
+  input:focus-visible, select:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .btn {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 14px;
+    min-height: 42px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.ghost { background: transparent; }
+  .btn.danger { color: var(--danger); }
+  .btn.icon { padding: 0; width: 42px; flex: 0 0 42px; }
+  .btn.star { font-size: 1.2rem; color: var(--muted); }
+  .btn.star.on { color: var(--plan); border-color: var(--plan); }
+  .btn.on:not(.star) { background: var(--good); border-color: var(--good); color: #fff; font-weight: 600; }
+  @media (prefers-color-scheme: dark) { .btn.on:not(.star) { color: #08130d; } }
+
+  /* Sätze */
+  .sets { margin-top: 10px; display: grid; gap: 6px; }
+  .set { display: grid; grid-template-columns: 28px 1fr 1fr 42px; gap: 8px; align-items: center; }
+  .set .n { color: var(--muted); font-variant-numeric: tabular-nums; text-align: center; }
+  .set-head { font-size: .78rem; color: var(--muted); }
+  .last { margin-top: 6px; padding: 8px 10px; background: var(--accent-soft); border-radius: 8px; font-size: .875rem; }
+
+  /* Kalender */
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; }
+  .cal .wd { text-align: center; font-size: .75rem; color: var(--muted); padding: 2px 0; }
+  .day {
+    position: relative;
+    aspect-ratio: 1;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+    padding: 0;
+  }
+  .day.today { border-color: var(--accent); border-width: 2px; }
+  .day.done { background: var(--good); border-color: var(--good); color: #fff; font-weight: 600; }
+  @media (prefers-color-scheme: dark) { .day.done { color: #08130d; } }
+  .day.plan { background: var(--plan); border-color: var(--plan); color: #1a1205; font-weight: 600; }
+  .day.miss { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 600; }
+  @media (prefers-color-scheme: dark) { .day.miss { color: #1a0806; } }
+  .day.done::after, .day.plan::after, .day.miss::after { position: absolute; right: 5px; top: 2px; font-size: .7rem; }
+  .day.done::after { content: "✓"; }
+  .day.plan::after { content: "○"; }
+  .day.miss::after { content: "✕"; }
+  .day.haslog::before {
+    content: ""; position: absolute; left: 50%; bottom: 5px; width: 5px; height: 5px;
+    margin-left: -2.5px; border-radius: 50%; background: currentColor; opacity: .7;
+  }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+  .stat b { display: block; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: .78rem; color: var(--muted); }
+
+  /* Fortschritt */
+  .seg { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .seg button { flex: 0 0 auto; border-radius: 999px; min-height: 36px; padding: 6px 12px; font-size: .875rem; }
+  .seg button[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  #chart { position: relative; margin-top: 8px; }
+  #chart svg { display: block; width: 100%; touch-action: pan-y; }
+  #chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .tip {
+    position: absolute; pointer-events: none; transform: translate(-50%, -100%);
+    background: var(--text); color: var(--bg); border-radius: 6px; padding: 4px 8px;
+    font-size: .8rem; white-space: nowrap; display: none;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+  th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .fig { flex: 0 0 auto; display: block; }
+  .badge {
+    display: inline-block; font-size: .72rem; font-weight: 500; padding: 1px 8px; border-radius: 999px;
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); margin-left: 6px; vertical-align: middle;
+  }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .8rem; color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; }
+  .group-h { font-size: .8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 14px 0 2px; }
+  .group-h:first-child { margin-top: 0; }
+  .list-item { display: flex; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .list-item:last-child { border-bottom: 0; }
+  .actions { display: flex; gap: 8px; flex: 0 0 auto; }
+
+  /* Handy: kleinere Figuren, Knöpfe der Übungsliste in eigener Zeile */
+  @media (max-width: 520px) {
+    main { padding: 12px; }
+    .card { padding: 12px; }
+    .card .fig { width: 84px; height: auto; }
+    .list-item { flex-wrap: wrap; }
+    .list-item .fig { width: 64px; }
+    .list-item .actions { flex-basis: 100%; justify-content: flex-end; }
+    .stat b { font-size: 1.15rem; }
+  }
+
+  nav {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav .tabs { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, 1fr); }
+  nav button {
+    background: none; border: 0; padding: 10px 4px 12px; cursor: pointer;
+    color: var(--muted); font-size: .72rem; display: grid; gap: 2px; justify-items: center;
+    border-top: 2px solid transparent;
+  }
+  nav button .ic { font-size: 1.25rem; line-height: 1; }
+  nav button[aria-current=page] { color: var(--accent); border-top-color: var(--accent); font-weight: 600; }
+  .empty { text-align: center; color: var(--muted); padding: 22px 8px; }
+</style>
+</head>
+<body>
+<main id="view"></main>
+<nav aria-label="Hauptnavigation">
+  <div class="tabs">
+    <button data-tab="training"><span class="ic">🏋️</span>Training</button>
+    <button data-tab="uebersicht"><span class="ic">🗒️</span>Übersicht</button>
+    <button data-tab="kalender"><span class="ic">📅</span>Kalender</button>
+    <button data-tab="fortschritt"><span class="ic">📈</span>Fortschritt</button>
+    <button data-tab="koerper"><span class="ic">⚖️</span>Körper</button>
+    <button data-tab="uebungen"><span class="ic">📋</span>Übungen</button>
+  </div>
+</nav>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- Daten ----------
+  var KEY = 'trainingstagebuch.v1';
+
+  // Muskelgruppen: Schlüssel -> [Anzeigename, Übungsgruppe]
+  var MUSCLES = {
+    brust: ['Brust', 'Brust'],
+    lat: ['Rücken (Latissimus)', 'Rücken'],
+    ruecken_oben: ['Oberer Rücken', 'Rücken'],
+    trapez: ['Nacken / Trapez', 'Rücken'],
+    ruecken_unten: ['Unterer Rücken', 'Rücken'],
+    schulter: ['Schultern', 'Schultern'],
+    schulter_h: ['Hintere Schulter', 'Schultern'],
+    bizeps: ['Bizeps', 'Arme'],
+    trizeps: ['Trizeps', 'Arme'],
+    unterarm: ['Unterarme', 'Arme'],
+    quads: ['Oberschenkel vorne', 'Beine'],
+    beinbeuger: ['Oberschenkel hinten', 'Beine'],
+    gesaess: ['Gesäß', 'Beine'],
+    adduktoren: ['Adduktoren (Oberschenkel innen)', 'Beine'],
+    waden: ['Waden', 'Beine'],
+    bauch: ['Bauch', 'Bauch'],
+    schraege: ['Seitliche Bauchmuskeln', 'Bauch']
+  };
+  var EQ = { LH: 'Langhantel', KH: 'Kurzhantel', M: 'Maschine', K: 'Kabelzug', KG: 'Körpergewicht' };
+  var GROUPS = ['Brust', 'Rücken', 'Schultern', 'Arme', 'Beine', 'Bauch', 'Eigene'];
+  // Vorbelegte Übungen: [Name, Gruppe, Gerät, Hauptmuskeln, unterstützende Muskeln, Hinweis]
+  var CATALOG = [
+    ['Bankdrücken (Langhantel)', 'Brust', 'LH', 'brust', 'trizeps,schulter', 'Beide Arme drücken gemeinsam an einer Stange – dadurch ist mehr Gewicht möglich. Gewicht = Stange plus Scheiben.'],
+    ['Bankdrücken (Kurzhantel)', 'Brust', 'KH', 'brust', 'schulter,trizeps', 'Jede Seite arbeitet einzeln: größerer Bewegungsweg, mehr Stabilisierung durch die Schultern, gleicht Kraftunterschiede aus.'],
+    ['Schrägbankdrücken (Langhantel)', 'Brust', 'LH', 'brust,schulter', 'trizeps', 'Betont die obere Brust. Mit der Stange ist mehr Gewicht möglich.'],
+    ['Schrägbankdrücken (Kurzhantel)', 'Brust', 'KH', 'brust,schulter', 'trizeps', 'Betont die obere Brust. Mit Kurzhanteln größerer Bewegungsweg, jede Seite arbeitet einzeln.'],
+    ['Negativbankdrücken', 'Brust', 'LH', 'brust', 'trizeps', 'Betont die untere Brust.'],
+    ['Brustpresse', 'Brust', 'M', 'brust', 'trizeps,schulter'],
+    ['Butterfly', 'Brust', 'M', 'brust', 'schulter'],
+    ['Fliegende (Kurzhantel)', 'Brust', 'KH', 'brust', 'schulter'],
+    ['Cable Crossover', 'Brust', 'K', 'brust', 'schulter'],
+    ['Liegestütze', 'Brust', 'KG', 'brust', 'trizeps,schulter,bauch'],
+    ['Dips', 'Brust', 'KG', 'trizeps,brust', 'schulter'],
+
+    ['Klimmzüge', 'Rücken', 'KG', 'lat', 'bizeps,ruecken_oben,unterarm'],
+    ['Chin-ups (Untergriff)', 'Rücken', 'KG', 'lat,bizeps', 'ruecken_oben', 'Im Untergriff arbeitet der Bizeps deutlich stärker mit als beim Klimmzug.'],
+    ['Latzug', 'Rücken', 'K', 'lat', 'bizeps,ruecken_oben'],
+    ['Rudern (Langhantel)', 'Rücken', 'LH', 'lat,ruecken_oben', 'bizeps,ruecken_unten,trapez', 'Vorgebeugt mit der Stange: mehr Gewicht möglich, der untere Rücken muss die Position halten.'],
+    ['Rudern (Kurzhantel, einarmig)', 'Rücken', 'KH', 'lat,ruecken_oben', 'bizeps', 'Abgestützt auf der Bank: entlastet den unteren Rücken, jede Seite arbeitet einzeln.'],
+    ['Rudern am Kabel', 'Rücken', 'K', 'lat,ruecken_oben', 'bizeps,trapez'],
+    ['T-Bar-Rudern', 'Rücken', 'LH', 'lat,ruecken_oben', 'bizeps,ruecken_unten'],
+    ['Überzüge (Kurzhantel)', 'Rücken', 'KH', 'lat', 'brust,trizeps'],
+    ['Kreuzheben', 'Rücken', 'LH', 'ruecken_unten,gesaess,beinbeuger', 'trapez,quads,unterarm'],
+    ['Hyperextensions', 'Rücken', 'KG', 'ruecken_unten', 'gesaess,beinbeuger'],
+    ['Shrugs (Langhantel)', 'Rücken', 'LH', 'trapez', 'unterarm'],
+    ['Shrugs (Kurzhantel)', 'Rücken', 'KH', 'trapez', 'unterarm'],
+
+    ['Schulterdrücken (Langhantel)', 'Schultern', 'LH', 'schulter', 'trizeps,trapez', 'Mit der Stange ist mehr Gewicht möglich, die Bewegungsbahn ist fester.'],
+    ['Schulterdrücken (Kurzhantel)', 'Schultern', 'KH', 'schulter', 'trizeps,trapez', 'Freiere Bewegungsbahn, jede Seite arbeitet einzeln und muss selbst stabilisieren.'],
+    ['Arnold Press', 'Schultern', 'KH', 'schulter', 'trizeps'],
+    ['Seitheben', 'Schultern', 'KH', 'schulter', 'trapez'],
+    ['Frontheben', 'Schultern', 'KH', 'schulter', 'brust'],
+    ['Aufrechtes Rudern', 'Schultern', 'LH', 'schulter,trapez', 'bizeps'],
+    ['Reverse Butterfly', 'Schultern', 'M', 'schulter_h', 'ruecken_oben,trapez'],
+    ['Face Pulls', 'Schultern', 'K', 'schulter_h,ruecken_oben', 'trapez'],
+
+    ['Bizepscurls (Langhantel)', 'Arme', 'LH', 'bizeps', 'unterarm', 'Beide Arme gemeinsam – mehr Gewicht möglich.'],
+    ['Bizepscurls (Kurzhantel)', 'Arme', 'KH', 'bizeps', 'unterarm', 'Jeder Arm einzeln, mit Drehung des Handgelenks – größerer Bewegungsweg.'],
+    ['Hammercurls', 'Arme', 'KH', 'bizeps,unterarm', ''],
+    ['Konzentrationscurls', 'Arme', 'KH', 'bizeps', ''],
+    ['Scottcurls', 'Arme', 'LH', 'bizeps', 'unterarm'],
+    ['Bizepscurls am Kabel', 'Arme', 'K', 'bizeps', 'unterarm'],
+    ['Trizepsdrücken am Kabel', 'Arme', 'K', 'trizeps', ''],
+    ['Stirndrücken (French Press)', 'Arme', 'LH', 'trizeps', ''],
+    ['Trizepsdrücken über Kopf (Kurzhantel)', 'Arme', 'KH', 'trizeps', ''],
+    ['Enges Bankdrücken', 'Arme', 'LH', 'trizeps', 'brust,schulter'],
+    ['Kickbacks', 'Arme', 'KH', 'trizeps', ''],
+    ['Unterarmcurls', 'Arme', 'KH', 'unterarm', ''],
+
+    ['Kniebeugen', 'Beine', 'LH', 'quads,gesaess', 'beinbeuger,adduktoren,ruecken_unten'],
+    ['Frontkniebeugen', 'Beine', 'LH', 'quads', 'gesaess,bauch'],
+    ['Goblet Squat', 'Beine', 'KH', 'quads,gesaess', 'bauch'],
+    ['Beinpresse', 'Beine', 'M', 'quads', 'gesaess,beinbeuger'],
+    ['Ausfallschritte', 'Beine', 'KH', 'quads,gesaess', 'beinbeuger'],
+    ['Bulgarian Split Squat', 'Beine', 'KH', 'quads,gesaess', 'beinbeuger'],
+    ['Beinstrecker', 'Beine', 'M', 'quads', ''],
+    ['Beinbeuger', 'Beine', 'M', 'beinbeuger', 'waden'],
+    ['Rumänisches Kreuzheben', 'Beine', 'LH', 'beinbeuger,gesaess', 'ruecken_unten'],
+    ['Hip Thrust', 'Beine', 'LH', 'gesaess', 'beinbeuger'],
+    ['Adduktorenmaschine', 'Beine', 'M', 'adduktoren', ''],
+    ['Abduktorenmaschine', 'Beine', 'M', 'gesaess', ''],
+    ['Wadenheben stehend', 'Beine', 'M', 'waden', ''],
+    ['Wadenheben sitzend', 'Beine', 'M', 'waden', ''],
+
+    ['Crunches', 'Bauch', 'KG', 'bauch', ''],
+    ['Cable Crunch', 'Bauch', 'K', 'bauch', ''],
+    ['Beinheben hängend', 'Bauch', 'KG', 'bauch', 'unterarm'],
+    ['Plank', 'Bauch', 'KG', 'bauch', 'schraege,ruecken_unten'],
+    ['Seitstütz', 'Bauch', 'KG', 'schraege', 'bauch'],
+    ['Russian Twist', 'Bauch', 'KG', 'schraege', 'bauch'],
+    ['Ab-Wheel', 'Bauch', 'KG', 'bauch', 'lat,schulter']
+  ];
+  // Alte Namen aus früheren Versionen -> neuer Name (Einträge bleiben erhalten)
+  var RENAMES = {
+    'Bankdrücken': 'Bankdrücken (Langhantel)',
+    'Schrägbankdrücken': 'Schrägbankdrücken (Langhantel)',
+    'Schulterdrücken': 'Schulterdrücken (Langhantel)',
+    'Langhantelrudern': 'Rudern (Langhantel)',
+    'Bizepscurls': 'Bizepscurls (Kurzhantel)',
+    'Wadenheben': 'Wadenheben stehend',
+    'Beinheben': 'Beinheben hängend'
+  };
+
+  var state = load();
+  var ui = { tab: 'training', date: iso(new Date()), month: null, exId: null, metric: 'max', calSel: null };
+  var lastChart = null;
+
+  function split(s) { return s ? s.split(',') : []; }
+  // Ergänzt fehlende Felder und spielt den Übungskatalog einmalig ein
+  function normalize(s) {
+    s.trained = s.trained || {};   // { 'YYYY-MM-DD': 'plan' | 'done' | 'miss' }
+    Object.keys(s.trained).forEach(function (d) {
+      var v = s.trained[d];
+      if (v === true) s.trained[d] = 'done';
+      else if (v !== 'plan' && v !== 'done' && v !== 'miss') delete s.trained[d];
+    });
+    s.body = s.body || {};         // { 'YYYY-MM-DD': kg }
+    s.backupBase = s.backupBase || iso(new Date());   // ab hier zählt die Sicherungs-Erinnerung
+    if (!(s.catalog >= 2)) {
+      var find = function (name) { return s.exercises.find(function (e) { return e.name.toLowerCase() === name.toLowerCase(); }); };
+      Object.keys(RENAMES).forEach(function (old) {
+        var ex = find(old);
+        if (ex && !find(RENAMES[old])) ex.name = RENAMES[old];
+      });
+      CATALOG.forEach(function (c, i) {
+        var ex = find(c[0]);
+        if (!ex) { ex = { id: uid(), name: c[0] }; s.exercises.push(ex); }
+        ex.group = c[1]; ex.eq = c[2]; ex.p = split(c[3]); ex.s = split(c[4]); ex.note = c[5] || ''; ex.order = i;
+      });
+      s.exercises.sort(function (a, b) {
+        return (a.order == null ? 1e6 : a.order) - (b.order == null ? 1e6 : b.order);
+      });
+      s.catalog = 2;
+    }
+    return s;
+  }
+  function load() {
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+    if (!s || !Array.isArray(s.exercises) || !Array.isArray(s.logs)) {
+      s = { exercises: [], logs: [] };   // logs: { id, date, exId, sets: [{ w, r }] }
+    }
+    return normalize(s);
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); }
+    catch (e) { alert('Speichern fehlgeschlagen: ' + e.message); }
+  }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  // ---------- Helfer ----------
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function parseIso(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function fmtDate(s) { var p = s.split('-'); return p[2] + '.' + p[1] + '.' + p[0]; }
+  function fmtShort(s) { var p = s.split('-'); return p[2] + '.' + p[1] + '.'; }
+  function num(v) { var s = String(v == null ? '' : v).trim().replace(',', '.'); return s === '' ? NaN : Number(s); }
+  function fmtNum(n) { return n.toLocaleString('de-DE', { maximumFractionDigits: 1 }); }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function exName(id) {
+    var e = state.exercises.find(function (x) { return x.id === id; });
+    return e ? e.name : '(gelöscht)';
+  }
+  function exById(id) { return state.exercises.find(function (x) { return x.id === id; }); }
+  function byGroup(list) {
+    // Favoriten stehen als eigene Gruppe ganz oben
+    return ['Favoriten'].concat(GROUPS).map(function (g) {
+      return { name: g === 'Favoriten' ? '★ Favoriten' : g, items: list.filter(function (e) {
+        return (e.fav ? 'Favoriten' : GROUPS.indexOf(e.group) >= 0 ? e.group : 'Eigene') === g;
+      }) };
+    }).filter(function (g) { return g.items.length; });
+  }
+  function optionsHtml(list, selected) {
+    return byGroup(list).map(function (g) {
+      return '<optgroup label="' + g.name + '">' + g.items.map(function (e) {
+        return '<option value="' + e.id + '"' + (e.id === selected ? ' selected' : '') + '>' + esc(e.name) + '</option>';
+      }).join('') + '</optgroup>';
+    }).join('');
+  }
+  function muscleNames(keys) {
+    return (keys || []).filter(function (k) { return MUSCLES[k]; }).map(function (k) { return MUSCLES[k][0]; }).join(', ');
+  }
+  function musclesText(ex) {
+    if (!ex || !ex.p || !ex.p.length) return '';
+    var s = muscleNames(ex.s);
+    return esc(muscleNames(ex.p)) + (s ? '<br>unterstützend: ' + esc(s) : '');
+  }
+  // Symbolbild: Körper von vorne und hinten, beanspruchte Muskeln eingefärbt
+  function figure(ex, width) {
+    var p = (ex && ex.p) || [], s = (ex && ex.s) || [];
+    if (!p.length && !s.length) return '';
+    // Farbe eines Muskels; mehrere Schlüssel = stärkste Beanspruchung gewinnt
+    function c() {
+      var keys = Array.prototype.slice.call(arguments);
+      if (keys.some(function (k) { return p.indexOf(k) >= 0; })) return 'var(--muscle)';
+      if (keys.some(function (k) { return s.indexOf(k) >= 0; })) return 'var(--muscle-2)';
+      return 'var(--body)';
+    }
+    function P(fill, d) { return '<path fill="' + fill + '" d="' + d + '"/>'; }
+    function R(fill, x, y, w, h) { return '<rect fill="' + fill + '" x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="1.8"/>'; }
+    // Jede Körperhälfte wird einmal gezeichnet und gespiegelt
+    function both(half) { return half + '<g transform="translate(100 0) scale(-1 1)">' + half + '</g>'; }
+
+    var DELT = 'M28.5 38 C22.5 39.5 19 45 19 53 C21.5 55.5 24.5 54.5 26.5 50.5 C27.5 46 29.5 42 31.5 39 Z';
+    var UPPER_ARM = 'M19 56.5 C17.8 62 16.8 68 16.8 72.5 C19 74.5 22 74 23.6 71.5 C24.3 66 24.6 61 25 56.5 C23 57.8 21 57.8 19 56.5 Z';
+    var FOREARM = 'M16 76 C14 84 12.3 92 11.3 100 L10.5 107 L15.8 107.5 L20 90 C21.6 84 22.6 80 23 75.5 C20.8 77.5 18.2 77.8 16 76 Z';
+    var sil = '<g fill="var(--sil)"><ellipse cx="50" cy="13.5" rx="8.5" ry="10.5"/>' + both(P('var(--sil)', SIL)) + '</g>';
+
+    var front = sil + both(
+      P(c('trapez'), 'M46.5 30.5 C42 33.5 36 34.5 31.5 36.5 L45 37 Z') +
+      P(c('schulter'), DELT) +
+      P(c('brust'), 'M49 39 L34 38.5 C30 42 28 48 28.5 54.5 C33 59 42 59.5 49 56.5 Z') +
+      P(c('bizeps'), UPPER_ARM) +
+      P(c('unterarm'), FOREARM) +
+      R(c('bauch'), 41.5, 60, 7.5, 7.5) + R(c('bauch'), 41.5, 69, 7.5, 7.5) + R(c('bauch'), 41.5, 78, 7.5, 7.5) +
+      P(c('bauch'), 'M41.5 87.5 L49 87.5 L49 106 C45.5 102 42.5 96 41.5 87.5 Z') +
+      P(c('schraege'), 'M29.8 59 C33 61.5 37 62.5 40 62 L40 87 C40 93 41 98 42.5 102.5 C38 101.5 33.8 100 31.6 98.5 C30.6 88 29.6 74 29.8 59 Z') +
+      P(c('quads'), 'M28.5 125 C27.8 138 29 152 31.5 163 C33.2 166 35 165 35.5 162 C34 148 33.2 135 33 121 C31.2 122 29.6 123.2 28.5 125 Z') +
+      P(c('quads'), 'M34.6 120 C35 135 36 150 37.2 162.5 C39 165.5 42 164.5 42.5 160.5 C43 146 42.4 132 40.4 116 C38.2 117.6 36.2 119 34.6 120 Z') +
+      P(c('adduktoren'), 'M42.2 116 C43.8 126 44.4 136 44.4 144 C46.2 137 47.8 130 48.8 124.5 C46.6 122 44.2 119 42.2 116 Z') +
+      P(c('waden'), 'M32 176 C31 186 31.8 196 33.5 204 L38 204 C40 196 40.8 186 40 176 C37.5 178 34.5 178 32 176 Z')
+    );
+    var back = sil + both(
+      P(c('trapez'), 'M49.5 26 L46.5 30 C42 33.5 36 34.5 31 36.8 C36.5 40 41 42 44 44 L49.5 70 Z') +
+      P(c('schulter', 'schulter_h'), DELT) +
+      P(c('ruecken_oben'), 'M31.5 40 C36 42.5 40 44 43 46 L44.6 54.5 C39 55.5 33 54.5 28.8 52.5 C28.8 47.5 29.8 43.5 31.5 40 Z') +
+      P(c('lat'), 'M28.8 55.5 C34 57.5 40 57.5 45 57 L48.5 73 L48.5 92 C42 90 36 84 31.5 76 C29.8 70 28.8 62 28.8 55.5 Z') +
+      P(c('ruecken_unten'), 'M49 95 C43 93.5 38 90 34 85.5 C32.5 90 31.6 95 31.6 99 C33.5 105 36 110 39 113 L49 113 Z') +
+      P(c('trizeps'), UPPER_ARM) +
+      P(c('unterarm'), FOREARM) +
+      P(c('gesaess'), 'M49 116 L33.5 115.5 C29.8 119 28.6 126 29 133 C33 139 42 139.5 49 135 Z') +
+      P(c('beinbeuger'), 'M29.5 139 C29 149 30 158 32 166 C34 167 35.5 166 36 164 C35.5 155 35.5 148 36 142.5 C33.5 142 31 141 29.5 139 Z') +
+      P(c('beinbeuger'), 'M37.5 143 C37 151 37.5 158 38 165 C40 167 42 166 42.5 163 C44.5 155 46 147 46.6 140.5 C44 142.3 40.5 143.2 37.5 143 Z') +
+      P(c('waden'), 'M31.2 172 C29.8 180 30.2 189 32.4 196 C33.6 197 35 196.5 35.5 195 C35.5 187 35.5 179 35 172 C33.6 173 32.2 173 31.2 172 Z') +
+      P(c('waden'), 'M36.5 172 C36.5 180 36.5 188 37 195.5 C38.5 197 40 196.5 41 195 C42 188 42 180 40.8 172 C39.4 173.5 38 173.5 36.5 172 Z')
+    );
+    var label = 'Beanspruchte Muskeln: ' + muscleNames(p) + (s.length ? '; unterstützend: ' + muscleNames(s) : '');
+    return '<svg class="fig" width="' + width + '" height="' + Math.round(width * 220 / 196) + '" viewBox="0 0 196 220" role="img" aria-label="' + esc(label) + '">' +
+      '<title>' + esc(label) + '</title><g>' + front + '</g><g transform="translate(96 0)">' + back + '</g></svg>';
+  }
+  // Körperumriss (linke Hälfte, wird gespiegelt)
+  var SIL = 'M50 24 L45.5 24 L45.5 30 C41 33.5 33 34 28 36.5 C21 38.5 17.5 45 17.5 53 L15 72 C12.5 82 10.5 92 9.5 102 L8 111 ' +
+    'C6.5 117 8.5 122 11.5 121.5 C14.5 121 16 115 16.5 110 L21.5 90 C23.5 83 24.5 76 25.5 66 L27 60 C27 75 29 88 30 98 ' +
+    'C28 106 27 114 27 122 C26 140 28 156 31 168 C28.5 178 29 190 32 204 L31 211 L27.5 217 L40.5 217 L39.5 204 ' +
+    'C42.5 190 42.5 178 41 168 C44 152 47.5 137 50 124 Z';
+  var LEGEND = '<div class="legend"><span><i style="background:var(--muscle)"></i>Hauptmuskel</span>' +
+    '<span><i style="background:var(--muscle-2)"></i>unterstützend</span><span>links: vorne · rechts: hinten</span></div>';
+  function starBtn(ex) {
+    var on = !!(ex && ex.fav);
+    return '<button class="btn icon star' + (on ? ' on' : '') + '" data-act="fav-ex" aria-pressed="' + on +
+      '" aria-label="' + (on ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen') + '" title="Favorit">' + (on ? '★' : '☆') + '</button>';
+  }
+  function badge(ex) { return ex && EQ[ex.eq] ? ' <span class="badge">' + EQ[ex.eq] + '</span>' : ''; }
+  function weightLabel(ex) {
+    return ex && ex.eq === 'KH' ? 'Gewicht je Hantel (kg)' : ex && ex.eq === 'KG' ? 'Zusatzgewicht (kg)' : 'Gewicht (kg)';
+  }
+  function validSets(log) {
+    var ex = exById(log.exId), bw = ex && ex.eq === 'KG';
+    return log.sets.map(function (s) { var w = num(s.w); return { w: isNaN(w) && bw ? 0 : w, r: num(s.r) }; })
+      .filter(function (s) { return s.r > 0 && s.w >= 0; });
+  }
+  function setsText(sets) {
+    return sets.map(function (s) { return fmtNum(s.w) + ' kg × ' + fmtNum(s.r); }).join(' · ');
+  }
+  function lastLog(exId, before) {
+    var best = null;
+    state.logs.forEach(function (l) {
+      if (l.exId === exId && l.date < before && validSets(l).length && (!best || l.date > best.date)) best = l;
+    });
+    return best;
+  }
+  function trainedDays() { return Object.keys(state.trained).filter(function (d) { return state.trained[d] === 'done'; }); }
+  var STATUS = { plan: 'geplant', done: 'absolviert', miss: 'nicht gemacht' };
+  var NEXT_STATUS = { '': 'plan', plan: 'done', done: 'miss', miss: '' };
+
+  // ---------- Rendering ----------
+  var view = document.getElementById('view');
+  function render() {
+    document.querySelectorAll('nav button').forEach(function (b) {
+      if (b.dataset.tab === ui.tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+    lastChart = null;
+    ({ training: renderTraining, uebersicht: renderUebersicht, kalender: renderKalender, fortschritt: renderFortschritt, koerper: renderKoerper, uebungen: renderUebungen })[ui.tab]();
+  }
+
+  // ----- Training -----
+  function renderTraining() {
+    var date = ui.date;
+    var logs = state.logs.filter(function (l) { return l.date === date; });
+    var done = state.trained[date] === 'done';
+    var h = '<h1>Training</h1>' + backupBanner() +
+      '<div class="card"><div class="row">' +
+        '<input type="date" id="date" class="grow" value="' + date + '" aria-label="Datum">' +
+        '<button class="btn ' + (done ? 'on' : '') + '" data-act="toggle-done" aria-pressed="' + done + '">' +
+          (done ? '✓ Abgehakt' : 'Abhaken') + '</button>' +
+      '</div></div>';
+
+    logs.forEach(function (log) {
+      var last = lastLog(log.exId, date), ex = exById(log.exId);
+      var lastSets = last ? validSets(last) : [];
+      h += '<div class="card" data-log="' + log.id + '">' +
+        '<div class="row" style="align-items:flex-start">' + figure(ex, 132) +
+        '<div class="grow"><h2>' + esc(exName(log.exId)) + badge(ex) + '</h2><div class="muted small">' + musclesText(ex) + '</div></div>' +
+        '<div class="actions">' + starBtn(ex) +
+        '<button class="btn ghost danger icon" data-act="del-log" aria-label="Übung von diesem Tag entfernen">✕</button></div></div>' +
+        (ex && ex.note ? '<div class="small" style="margin-top:8px">' + esc(ex.note) + '</div>' : '') +
+        (last
+          ? '<div class="last"><b>Letztes Mal</b> (' + fmtDate(last.date) + '): ' + esc(setsText(lastSets)) + '</div>'
+          : '<div class="last">Noch kein früherer Eintrag für diese Übung.</div>') +
+        '<div class="sets"><div class="set set-head"><span></span><span>' + weightLabel(ex) + '</span><span>Wiederholungen</span><span></span></div>';
+      log.sets.forEach(function (s, i) {
+        var p = lastSets[i] || lastSets[lastSets.length - 1];
+        h += '<div class="set" data-set="' + i + '">' +
+          '<span class="n">' + (i + 1) + '</span>' +
+          '<input type="text" inputmode="decimal" data-f="w" value="' + esc(s.w) + '" placeholder="' + (p ? fmtNum(p.w) : 'kg') + '" aria-label="Gewicht Satz ' + (i + 1) + '">' +
+          '<input type="text" inputmode="numeric" data-f="r" value="' + esc(s.r) + '" placeholder="' + (p ? fmtNum(p.r) : 'Wdh.') + '" aria-label="Wiederholungen Satz ' + (i + 1) + '">' +
+          '<button class="btn ghost icon" data-act="del-set" aria-label="Satz löschen">−</button></div>';
+      });
+      h += '</div><div class="row" style="margin-top:10px"><button class="btn" data-act="add-set">+ Satz</button></div></div>';
+    });
+
+    if (!logs.length) h += '<div class="empty">Für diesen Tag ist noch nichts eingetragen.<br>Wähle unten eine Übung aus.</div>';
+
+    var free = state.exercises.filter(function (e) { return !logs.some(function (l) { return l.exId === e.id; }); });
+    h += '<div class="card"><div class="row">' +
+      '<select id="add-ex" class="grow" aria-label="Übung auswählen">' +
+        (free.length ? optionsHtml(free) : '<option value="">Keine weitere Übung</option>') +
+      '</select><button class="btn primary" data-act="add-log"' + (free.length ? '' : ' disabled') + '>Hinzufügen</button></div>' +
+      '<div class="row" style="margin-top:8px"><input type="text" id="new-ex" class="grow" placeholder="Neue Übung anlegen …" aria-label="Neue Übung">' +
+      '<button class="btn" data-act="new-ex-add">Anlegen</button></div></div>';
+    view.innerHTML = h;
+  }
+
+  // ----- Übersicht: Übung + zuletzt verwendetes Gewicht -----
+  function renderUebersicht() {
+    var rows = state.exercises.map(function (e) {
+      var last = lastLog(e.id, '9999-12-31');
+      if (!last) return null;
+      var w = Math.max.apply(null, validSets(last).map(function (s) { return s.w; }));
+      return { group: e.group, fav: e.fav, name: e.name, w: w };
+    }).filter(Boolean);
+    var h = '<h1>Übersicht</h1>';
+    if (!rows.length) {
+      view.innerHTML = h + '<div class="empty">Sobald du Übungen im Training einträgst, steht hier dein zuletzt verwendetes Gewicht.</div>';
+      return;
+    }
+    h += '<div class="card">';
+    byGroup(rows).forEach(function (g) {
+      h += '<div class="group-h" style="margin-top:14px">' + g.name + '</div>';
+      g.items.forEach(function (r) {
+        h += '<div class="list-item"><div class="grow">' + esc(r.name) + '</div>' +
+          '<b style="font-variant-numeric:tabular-nums;white-space:nowrap">' + (r.w > 0 ? fmtNum(r.w) + ' kg' : '–') + '</b></div>';
+      });
+    });
+    view.innerHTML = h + '</div>';
+  }
+
+  // ----- Kalender -----
+  var MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+  function renderKalender() {
+    var today = iso(new Date());
+    if (!ui.month) ui.month = today.slice(0, 7);
+    var y = +ui.month.slice(0, 4), m = +ui.month.slice(5, 7) - 1;
+    var first = new Date(y, m, 1), days = new Date(y, m + 1, 0).getDate();
+    var offset = (first.getDay() + 6) % 7; // Montag zuerst
+    var logDays = {};
+    state.logs.forEach(function (l) { logDays[l.date] = true; });
+
+    var all = trainedDays();
+    var now = new Date(), mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() + 6) % 7);
+    var sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
+    // "x / y": absolviert von allen markierten Tagen (geplant + absolviert + nicht gemacht)
+    function ratio(test) {
+      var marked = Object.keys(state.trained).filter(test);
+      var done = marked.filter(function (d) { return state.trained[d] === 'done'; }).length;
+      return done + (marked.length > done ? ' / ' + marked.length : '');
+    }
+    var inWeek = ratio(function (d) { return d >= iso(mon) && d <= iso(sun); });
+    var inMonth = ratio(function (d) { return d.slice(0, 7) === ui.month; });
+
+    var h = '<h1>Kalender</h1>' +
+      '<div class="stats">' +
+        '<div class="stat"><b>' + inWeek + '</b><span>diese Woche absolviert</span></div>' +
+        '<div class="stat"><b>' + inMonth + '</b><span>im ' + MONTHS[m] + ' absolviert</span></div>' +
+        '<div class="stat"><b>' + all.length + '</b><span>insgesamt absolviert</span></div>' +
+      '</div>' +
+      '<div class="card" style="margin-top:12px"><div class="row spread">' +
+        '<button class="btn icon" data-act="month" data-d="-1" aria-label="Vorheriger Monat">‹</button>' +
+        '<h2>' + MONTHS[m] + ' ' + y + '</h2>' +
+        '<button class="btn icon" data-act="month" data-d="1" aria-label="Nächster Monat">›</button></div>' +
+      '<div class="cal">' + ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(function (w) { return '<div class="wd">' + w + '</div>'; }).join('');
+    for (var i = 0; i < offset; i++) h += '<div></div>';
+    for (var d = 1; d <= days; d++) {
+      var ds = ui.month + '-' + pad(d);
+      var st = state.trained[ds] || '';
+      var cls = 'day' + (st ? ' ' + st : '') + (logDays[ds] ? ' haslog' : '') + (ds === today ? ' today' : '');
+      h += '<button class="' + cls + '" data-act="day" data-date="' + ds +
+        '" aria-label="' + d + '. ' + MONTHS[m] + (st ? ', ' + STATUS[st] : '') + '">' + d + '</button>';
+    }
+    h += '</div><div class="legend" style="margin-top:12px">' +
+      '<span><i style="background:var(--plan)"></i>geplant</span>' +
+      '<span><i style="background:var(--good)"></i>absolviert</span>' +
+      '<span><i style="background:var(--danger)"></i>nicht gemacht</span></div>' +
+      '<p class="muted small" style="margin:8px 0 0">Jeder Klick auf einen Tag schaltet weiter: geplant → absolviert → nicht gemacht → leer. ' +
+      'Ein Punkt zeigt Tage mit eingetragenen Übungen.</p></div>';
+
+    if (ui.calSel) {
+      var logs = state.logs.filter(function (l) { return l.date === ui.calSel && validSets(l).length; });
+      var selSt = state.trained[ui.calSel];
+      h += '<div class="card"><div class="row spread"><div><h2>' + fmtDate(ui.calSel) + '</h2>' +
+        '<div class="muted small">' + (selSt ? STATUS[selSt] : 'nichts markiert') + '</div></div>' +
+        '<button class="btn" data-act="open-day">Einträge öffnen</button></div>' +
+        (logs.length
+          ? logs.map(function (l) { return '<p class="small" style="margin:8px 0 0"><b>' + esc(exName(l.exId)) + ':</b> ' + esc(setsText(validSets(l))) + '</p>'; }).join('')
+          : '<p class="muted small" style="margin:8px 0 0">Keine Übungen eingetragen.</p>') + '</div>';
+    }
+    view.innerHTML = h;
+  }
+
+  // ----- Fortschritt -----
+  var METRICS = {
+    max:  { label: 'Max. Gewicht',   unit: 'kg',   fn: function (s) { return Math.max.apply(null, s.map(function (x) { return x.w; })); } },
+    e1rm: { label: 'Geschätztes 1RM', unit: 'kg',  fn: function (s) { return Math.max.apply(null, s.map(function (x) { return x.r === 1 ? x.w : x.w * (1 + x.r / 30); })); } },
+    vol:  { label: 'Volumen',        unit: 'kg',   fn: function (s) { return s.reduce(function (a, x) { return a + x.w * x.r; }, 0); } },
+    reps: { label: 'Wiederholungen', unit: 'Wdh.', fn: function (s) { return s.reduce(function (a, x) { return a + x.r; }, 0); } }
+  };
+  function series(exId, metric) {
+    var byDate = {};
+    state.logs.forEach(function (l) {
+      if (l.exId !== exId) return;
+      var v = validSets(l);
+      if (v.length) byDate[l.date] = (byDate[l.date] || []).concat(v);
+    });
+    return Object.keys(byDate).sort().map(function (d) {
+      return { date: d, sets: byDate[d], v: METRICS[metric].fn(byDate[d]) };
+    });
+  }
+  function renderFortschritt() {
+    if (!state.exercises.some(function (e) { return e.id === ui.exId; })) {
+      // Standard: die zuletzt trainierte Übung
+      var latest = state.logs.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; })[0];
+      ui.exId = latest && state.exercises.some(function (e) { return e.id === latest.exId; })
+        ? latest.exId : (state.exercises[0] || {}).id || null;
+    }
+    var h = '<h1>Fortschritt</h1>';
+    if (!ui.exId) { view.innerHTML = h + '<div class="empty">Lege zuerst eine Übung an.</div>'; return; }
+    var M = METRICS[ui.metric], pts = series(ui.exId, ui.metric);
+    h += '<div class="card"><select id="prog-ex" aria-label="Übung">' +
+      optionsHtml(state.exercises, ui.exId) +
+      '</select><div class="seg" style="margin-top:10px" role="group" aria-label="Kennzahl">' +
+      Object.keys(METRICS).map(function (k) {
+        return '<button class="btn" data-act="metric" data-m="' + k + '" aria-pressed="' + (k === ui.metric) + '">' + METRICS[k].label + '</button>';
+      }).join('') + '</div>' +
+      (figure(exById(ui.exId), 110)
+        ? '<div class="row" style="margin-top:12px">' + figure(exById(ui.exId), 110) +
+          '<div class="grow muted small">' + badge(exById(ui.exId)) + '<div style="margin-top:4px">' + musclesText(exById(ui.exId)) + '</div></div></div>'
+        : '') + '</div>';
+
+    if (!pts.length) {
+      view.innerHTML = h + '<div class="empty">Für diese Übung gibt es noch keine Einträge.</div>';
+      return;
+    }
+    var firstV = pts[0].v, lastV = pts[pts.length - 1].v, diff = lastV - firstV;
+    var best = Math.max.apply(null, pts.map(function (p) { return p.v; }));
+    h += '<div class="stats">' +
+      '<div class="stat"><b>' + fmtNum(lastV) + '</b><span>zuletzt (' + M.unit + ')</span></div>' +
+      '<div class="stat"><b>' + fmtNum(best) + '</b><span>Bestwert (' + M.unit + ')</span></div>' +
+      '<div class="stat"><b>' + (diff > 0 ? '+' : '') + fmtNum(diff) + '</b><span>seit Beginn (' + M.unit + ')</span></div>' +
+      '</div>' +
+      '<div class="card" style="margin-top:12px"><h2>' + M.label + ' – ' + esc(exName(ui.exId)) + '</h2>' +
+      '<div id="chart"></div></div>' +
+      '<div class="card"><h2 style="margin-bottom:6px">Verlauf</h2><table><thead><tr><th>Datum</th><th>Sätze</th><th class="num">' + M.label + '</th></tr></thead><tbody>' +
+      pts.slice().reverse().map(function (p) {
+        return '<tr><td>' + fmtDate(p.date) + '</td><td>' + esc(setsText(p.sets)) + '</td><td class="num">' + fmtNum(p.v) + ' ' + M.unit + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    view.innerHTML = h;
+    drawChart(pts, M);
+  }
+
+  function niceStep(range, target) {
+    var raw = range / target, mag = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / mag;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * mag;
+  }
+  function drawChart(pts, M) {
+    var box = document.getElementById('chart');
+    if (!box) return;
+    lastChart = { pts: pts, M: M };
+    var W = Math.max(260, box.clientWidth), H = 230;
+    var pad = { l: 44, r: 14, t: 14, b: 26 };
+    var vals = pts.map(function (p) { return p.v; });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    if (lo === hi) { lo -= 1; hi += 1; }
+    var step = niceStep(hi - lo, 4);
+    var y0 = Math.floor(lo / step) * step, y1 = Math.ceil(hi / step) * step;
+    if (y0 < 0) y0 = 0;
+    var t0 = parseIso(pts[0].date).getTime(), t1 = parseIso(pts[pts.length - 1].date).getTime();
+    function X(p) { return t1 === t0 ? (pad.l + W - pad.r) / 2 : pad.l + (parseIso(p.date).getTime() - t0) / (t1 - t0) * (W - pad.l - pad.r); }
+    function Y(v) { return H - pad.b - (v - y0) / (y1 - y0) * (H - pad.t - pad.b); }
+
+    var s = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
+      esc(M.label) + ' über die Zeit, ' + pts.length + ' Trainings. Werte stehen in der Tabelle darunter.">';
+    for (var v = y0; v <= y1 + step / 1000; v += step) {
+      s += '<line x1="' + pad.l + '" x2="' + (W - pad.r) + '" y1="' + Y(v) + '" y2="' + Y(v) + '" stroke="var(--grid)" stroke-width="1"/>' +
+        '<text x="' + (pad.l - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + fmtNum(v) + '</text>';
+    }
+    // X-Beschriftung: erstes, letztes und ggf. mittleres Datum
+    var lab = [0];
+    if (pts.length > 2 && W > 320) lab.push(Math.floor((pts.length - 1) / 2));
+    if (pts.length > 1) lab.push(pts.length - 1);
+    lab.forEach(function (i, k) {
+      var anchor = pts.length === 1 ? 'middle' : k === 0 ? 'start' : k === lab.length - 1 ? 'end' : 'middle';
+      s += '<text x="' + X(pts[i]) + '" y="' + (H - 6) + '" text-anchor="' + anchor + '">' + fmtShort(pts[i].date) + '</text>';
+    });
+    s += '<line id="cross" y1="' + pad.t + '" y2="' + (H - pad.b) + '" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/>';
+    if (pts.length > 1) {
+      s += '<polyline fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="' +
+        pts.map(function (p) { return X(p).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ') + '"/>';
+    }
+    pts.forEach(function (p, i) {
+      s += '<circle data-i="' + i + '" cx="' + X(p).toFixed(1) + '" cy="' + Y(p.v).toFixed(1) + '" r="4.5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>';
+    });
+    s += '</svg><div class="tip"></div>';
+    box.innerHTML = s;
+
+    var svg = box.querySelector('svg'), tip = box.querySelector('.tip'), cross = box.querySelector('#cross');
+    var dots = box.querySelectorAll('circle');
+    function show(ev) {
+      var rect = svg.getBoundingClientRect(), mx = ev.clientX - rect.left, bi = 0, bd = Infinity;
+      pts.forEach(function (p, i) { var d = Math.abs(X(p) - mx); if (d < bd) { bd = d; bi = i; } });
+      var p = pts[bi], x = X(p), y = Y(p.v);
+      dots.forEach(function (c, i) { c.setAttribute('r', i === bi ? 6.5 : 4.5); });
+      cross.setAttribute('x1', x); cross.setAttribute('x2', x); cross.setAttribute('visibility', 'visible');
+      tip.textContent = fmtDate(p.date) + ' · ' + fmtNum(p.v) + ' ' + M.unit;
+      tip.style.display = 'block';
+      var half = tip.offsetWidth / 2;
+      tip.style.left = Math.min(W - half, Math.max(half, x)) + 'px';
+      tip.style.top = Math.max(26, y - 12) + 'px';
+    }
+    function hide() {
+      tip.style.display = 'none'; cross.setAttribute('visibility', 'hidden');
+      dots.forEach(function (c) { c.setAttribute('r', 4.5); });
+    }
+    svg.addEventListener('pointermove', show);
+    svg.addEventListener('pointerdown', show);
+    svg.addEventListener('pointerleave', hide);
+  }
+
+  // ----- Übungen -----
+  function renderUebungen() {
+    var h = '<h1>Übungen</h1><div class="card"><div class="row">' +
+      '<input type="text" id="new-ex" class="grow" placeholder="Name der Übung" aria-label="Neue Übung">' +
+      '<button class="btn primary" data-act="new-ex">Anlegen</button></div>' +
+      '<select id="new-ex-muscle" style="margin-top:8px" aria-label="Hauptmuskel der neuen Übung"><option value="">Hauptmuskel (optional)</option>' +
+      Object.keys(MUSCLES).map(function (k) { return '<option value="' + k + '">' + MUSCLES[k][0] + '</option>'; }).join('') +
+      '</select><select id="new-ex-eq" style="margin-top:8px" aria-label="Gerät der neuen Übung"><option value="">Gerät (optional)</option>' +
+      Object.keys(EQ).map(function (k) { return '<option value="' + k + '">' + EQ[k] + '</option>'; }).join('') +
+      '</select></div><div class="card">' + LEGEND;
+    if (!state.exercises.length) h += '<div class="empty">Noch keine Übungen.</div>';
+    byGroup(state.exercises).forEach(function (g) {
+      h += '<div class="group-h" style="margin-top:14px">' + g.name + '</div>';
+      g.items.forEach(function (e) {
+        var n = state.logs.filter(function (l) { return l.exId === e.id && validSets(l).length; }).length;
+        h += '<div class="list-item" data-ex="' + e.id + '">' + figure(e, 92) +
+          '<div class="grow"><div>' + esc(e.name) + '</div>' +
+          (EQ[e.eq] ? '<div style="margin:2px 0 3px -6px">' + badge(e) + '</div>' : '') +
+          '<div class="muted small">' + (muscleNames(e.p) ? esc(muscleNames(e.p)) + ' · ' : '') + n + (n === 1 ? ' Training' : ' Trainings') + '</div></div>' +
+          '<div class="actions">' + starBtn(e) +
+          '<button class="btn" data-act="show-ex">Kurve</button>' +
+          '<button class="btn icon" data-act="ren-ex" aria-label="Umbenennen">✎</button>' +
+          '<button class="btn danger icon" data-act="del-ex" aria-label="Löschen">✕</button></div></div>';
+      });
+    });
+    h += '</div><div class="card"><h2>Datensicherung</h2>' +
+      '<p class="muted small" style="margin:6px 0 10px">Die Daten liegen nur auf diesem Gerät. Sichere sie regelmäßig als Datei, ' +
+      'z. B. per WhatsApp an dich selbst oder in „Dateien“. Mit „Importieren“ holst du sie auf einem neuen Handy zurück.' +
+      (state.lastBackup ? ' Letzte Sicherung: ' + fmtDate(state.lastBackup) + '.' : ' Noch keine Sicherung.') + '</p>' +
+      '<div class="row wrap"><button class="btn" data-act="export">Exportieren</button>' +
+      '<button class="btn" data-act="import">Importieren</button>' +
+      '<input type="file" id="import-file" accept="application/json,.json" hidden></div></div>';
+    view.innerHTML = h;
+  }
+
+  // ----- Datensicherung -----
+  var BACKUP_DAYS = 7;
+  function daysSince(isoDate) { return Math.round((parseIso(iso(new Date())) - parseIso(isoDate)) / 864e5); }
+  function backupBanner() {
+    var hasData = state.logs.some(function (l) { return validSets(l).length; }) || Object.keys(state.body).length;
+    var today = iso(new Date());
+    if (!hasData || (state.backupSnooze && state.backupSnooze > today)) return '';
+    var since = daysSince(state.lastBackup || state.backupBase);
+    if (since < BACKUP_DAYS) return '';
+    return '<div class="card" style="border-color:var(--plan)"><b>Zeit für eine Sicherung</b>' +
+      '<p class="small" style="margin:4px 0 10px">' +
+      (state.lastBackup ? 'Deine letzte Sicherung ist ' + since + ' Tage her.' : 'Du hast deine Daten noch nie gesichert.') +
+      ' Die Einträge liegen nur auf diesem Gerät. Speichere die Datei z. B. in „Dateien“ oder schick sie dir per WhatsApp.</p>' +
+      '<div class="row wrap"><button class="btn primary" data-act="export">Jetzt sichern</button>' +
+      '<button class="btn" data-act="backup-later">Später</button></div></div>';
+  }
+  function markBackup() { state.lastBackup = iso(new Date()); delete state.backupSnooze; save(); render(); }
+  function exportData() {
+    var name = 'trainingstagebuch-' + iso(new Date()) + '.json';
+    var json = JSON.stringify(state, null, 2);
+    // Am Handy: Teilen-Menü (Dateien, WhatsApp, Mail ...), sonst normaler Download
+    try {
+      var file = new File([json], name, { type: 'application/json' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: 'Trainingstagebuch Sicherung' })
+          .then(markBackup)
+          .catch(function (e) { if (!e || e.name !== 'AbortError') download(); });
+        return;
+      }
+    } catch (e) {}
+    download();
+    function download() {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      markBackup();
+    }
+  }
+
+  // ----- Körpergewicht -----
+  function renderKoerper() {
+    var today = iso(new Date());
+    var pts = Object.keys(state.body).sort().map(function (d) { return { date: d, v: state.body[d] }; });
+    var h = '<h1>Körpergewicht</h1><div class="card"><div class="row wrap">' +
+      '<input type="date" id="body-date" class="grow" style="flex-basis:150px" value="' + today + '" max="' + today + '" aria-label="Datum">' +
+      '<input type="text" inputmode="decimal" id="body-w" class="grow" style="flex-basis:110px" placeholder="Gewicht in kg" aria-label="Körpergewicht in kg">' +
+      '<button class="btn primary" data-act="body-save">Speichern</button></div>' +
+      '<p class="muted small" style="margin:8px 0 0">Ein Wert pro Tag. Ein neuer Eintrag für denselben Tag ersetzt den alten.</p></div>';
+    if (!pts.length) {
+      view.innerHTML = h + '<div class="empty">Noch kein Gewicht eingetragen.</div>';
+      return;
+    }
+    var last = pts[pts.length - 1].v, total = last - pts[0].v;
+    var prev = pts.length > 1 ? last - pts[pts.length - 2].v : 0;
+    function signed(n) { return (n > 0 ? '+' : '') + fmtNum(n); }
+    h += '<div class="stats">' +
+      '<div class="stat"><b>' + fmtNum(last) + '</b><span>aktuell (kg)</span></div>' +
+      '<div class="stat"><b>' + signed(prev) + '</b><span>zum letzten Eintrag (kg)</span></div>' +
+      '<div class="stat"><b>' + signed(total) + '</b><span>seit Beginn (kg)</span></div></div>' +
+      '<div class="card" style="margin-top:12px"><h2>Körpergewicht</h2><div id="chart"></div></div>' +
+      '<div class="card"><h2 style="margin-bottom:6px">Verlauf</h2><table><thead><tr><th>Datum</th><th class="num">Gewicht</th><th></th></tr></thead><tbody>' +
+      pts.slice().reverse().map(function (p) {
+        return '<tr><td>' + fmtDate(p.date) + '</td><td class="num">' + fmtNum(p.v) + ' kg</td>' +
+          '<td class="num"><button class="btn ghost danger" style="min-height:32px;padding:2px 10px" data-act="body-del" data-date="' + p.date +
+          '" aria-label="Eintrag vom ' + fmtDate(p.date) + ' löschen">✕</button></td></tr>';
+      }).join('') + '</tbody></table></div>';
+    view.innerHTML = h;
+    drawChart(pts, { label: 'Körpergewicht', unit: 'kg' });
+  }
+
+  function addExercise(name, muscle, eq) {
+    name = name.trim();
+    if (!name) return null;
+    var ex = state.exercises.find(function (e) { return e.name.toLowerCase() === name.toLowerCase(); });
+    if (!ex) {
+      ex = { id: uid(), name: name };
+      if (MUSCLES[muscle]) { ex.p = [muscle]; ex.s = []; ex.group = MUSCLES[muscle][1]; }
+      if (EQ[eq]) ex.eq = eq;
+      state.exercises.push(ex); save();
+    }
+    return ex;
+  }
+  function addLog(exId) {
+    if (!exId || state.logs.some(function (l) { return l.date === ui.date && l.exId === exId; })) return;
+    state.logs.push({ id: uid(), date: ui.date, exId: exId, sets: [{ w: '', r: '' }] });
+    save();
+  }
+
+  // ---------- Ereignisse ----------
+  document.querySelector('nav').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-tab]');
+    if (b) { ui.tab = b.dataset.tab; render(); window.scrollTo(0, 0); }
+  });
+
+  view.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-act]');
+    if (!b) return;
+    var act = b.dataset.act;
+    var card = b.closest('[data-log]');
+    var log = card && state.logs.find(function (l) { return l.id === card.dataset.log; });
+
+    if (act === 'toggle-done') {
+      if (state.trained[ui.date] === 'done') delete state.trained[ui.date]; else state.trained[ui.date] = 'done';
+    } else if (act === 'add-log') {
+      addLog(document.getElementById('add-ex').value);
+    } else if (act === 'new-ex-add') {
+      var ex = addExercise(document.getElementById('new-ex').value);
+      if (ex) addLog(ex.id);
+    } else if (act === 'add-set' && log) {
+      var prev = log.sets[log.sets.length - 1] || { w: '', r: '' };
+      log.sets.push({ w: prev.w, r: prev.r });
+    } else if (act === 'del-set' && log) {
+      log.sets.splice(+b.closest('[data-set]').dataset.set, 1);
+      if (!log.sets.length) log.sets.push({ w: '', r: '' });
+    } else if (act === 'del-log' && log) {
+      if (validSets(log).length && !confirm(exName(log.exId) + ' von diesem Tag entfernen?')) return;
+      state.logs = state.logs.filter(function (l) { return l !== log; });
+    } else if (act === 'month') {
+      var d = new Date(+ui.month.slice(0, 4), +ui.month.slice(5, 7) - 1 + (+b.dataset.d), 1);
+      ui.month = iso(d).slice(0, 7);
+    } else if (act === 'day') {
+      var ds = b.dataset.date;
+      var next = NEXT_STATUS[state.trained[ds] || ''];
+      if (next) state.trained[ds] = next; else delete state.trained[ds];
+      ui.calSel = ds;
+    } else if (act === 'open-day') {
+      ui.date = ui.calSel; ui.tab = 'training';
+    } else if (act === 'metric') {
+      ui.metric = b.dataset.m;
+    } else if (act === 'new-ex') {
+      addExercise(document.getElementById('new-ex').value, document.getElementById('new-ex-muscle').value, document.getElementById('new-ex-eq').value);
+    } else if (act === 'body-save') {
+      var bw = num(document.getElementById('body-w').value), bd = document.getElementById('body-date').value;
+      if (!bd || !(bw > 0 && bw < 500)) { alert('Bitte ein gültiges Gewicht in kg eingeben.'); return; }
+      state.body[bd] = bw;
+    } else if (act === 'body-del') {
+      delete state.body[b.dataset.date];
+    } else if (act === 'fav-ex') {
+      var favRow = b.closest('[data-ex]');
+      var favEx = exById(log ? log.exId : favRow && favRow.dataset.ex);
+      if (!favEx) return;
+      if (favEx.fav) delete favEx.fav; else favEx.fav = true;
+    } else if (act === 'show-ex') {
+      ui.exId = b.closest('[data-ex]').dataset.ex; ui.tab = 'fortschritt';
+    } else if (act === 'ren-ex') {
+      var e1 = state.exercises.find(function (x) { return x.id === b.closest('[data-ex]').dataset.ex; });
+      var n = prompt('Neuer Name:', e1.name);
+      if (!n || !n.trim()) return;
+      e1.name = n.trim();
+    } else if (act === 'del-ex') {
+      var id = b.closest('[data-ex]').dataset.ex;
+      if (!confirm('„' + exName(id) + '“ und alle zugehörigen Einträge löschen?')) return;
+      state.exercises = state.exercises.filter(function (x) { return x.id !== id; });
+      state.logs = state.logs.filter(function (l) { return l.exId !== id; });
+    } else if (act === 'export') {
+      exportData();
+      return;
+    } else if (act === 'backup-later') {
+      var later = new Date(); later.setDate(later.getDate() + 3);
+      state.backupSnooze = iso(later);
+    } else if (act === 'import') {
+      document.getElementById('import-file').click();
+      return;
+    } else return;
+    save();
+    render();
+  });
+
+  // Eingaben in Sätzen: speichern ohne neu zu zeichnen (Fokus bleibt erhalten)
+  view.addEventListener('input', function (ev) {
+    var f = ev.target.dataset.f;
+    if (!f) return;
+    var log = state.logs.find(function (l) { return l.id === ev.target.closest('[data-log]').dataset.log; });
+    var set = log && log.sets[+ev.target.closest('[data-set]').dataset.set];
+    if (!set) return;
+    set[f] = ev.target.value;
+    if (validSets(log).length && state.trained[log.date] !== 'done') {
+      state.trained[log.date] = 'done';
+      var btn = view.querySelector('[data-act="toggle-done"]');
+      if (btn) { btn.classList.add('on'); btn.textContent = '✓ Abgehakt'; btn.setAttribute('aria-pressed', 'true'); }
+    }
+    save();
+  });
+
+  view.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (t.id === 'date' && t.value) { ui.date = t.value; render(); }
+    else if (t.id === 'prog-ex') { ui.exId = t.value; render(); }
+    else if (t.id === 'import-file' && t.files[0]) {
+      var r = new FileReader();
+      r.onload = function () {
+        try {
+          var s = JSON.parse(r.result);
+          if (!Array.isArray(s.exercises) || !Array.isArray(s.logs)) throw new Error('Unbekanntes Format');
+          if (!confirm('Aktuelle Daten durch die Sicherung ersetzen?')) return;
+          state = normalize(s); save(); render();
+        } catch (e) { alert('Import fehlgeschlagen: ' + e.message); }
+      };
+      r.readAsText(t.files[0]);
+    }
+  });
+
+  view.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter' || (ev.target.id !== 'new-ex' && ev.target.id !== 'body-w')) return;
+    var b = view.querySelector(ev.target.id === 'body-w' ? '[data-act="body-save"]' : '[data-act="new-ex-add"], [data-act="new-ex"]');
+    if (b) b.click();
+  });
+
+  var rz;
+  window.addEventListener('resize', function () {
+    clearTimeout(rz);
+    rz = setTimeout(function () { if (lastChart) drawChart(lastChart.pts, lastChart.M); }, 150);
+  });
+
+  render();
+
+  // Offline-Betrieb und Installation als App (nur über http/https möglich)
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+  // Den Browser bitten, die Daten nicht automatisch zu löschen
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+})();
+</script>
+</body>
+</html>

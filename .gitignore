@@ -1,0 +1,5 @@
+# Lokale Einstellungen von Claude Code (nicht Teil der App)
+.claude/
+
+# Datensicherungen der App nie hochladen
+trainingstagebuch-*.json

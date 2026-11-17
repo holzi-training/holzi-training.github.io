@@ -815,12 +815,18 @@
       Object.keys(MUSCLES).map(function (k) { return '<option value="' + k + '">' + MUSCLES[k][0] + '</option>'; }).join('') +
       '</select><select id="new-ex-eq" style="margin-top:8px" aria-label="Gerät der neuen Übung"><option value="">Gerät (optional)</option>' +
       Object.keys(EQ).map(function (k) { return '<option value="' + k + '">' + EQ[k] + '</option>'; }).join('') +
-      '</select></div><div class="card">' + LEGEND;
+      '</select></div><div class="card">' +
+      '<div class="seg" role="group" aria-label="Sortieren" style="margin-bottom:12px">' +
+      Object.keys(EX_SORTS).map(function (k) {
+        return '<button class="btn" data-act="ex-sort" data-s="' + k + '" aria-pressed="' + (k === exSort) + '">' + EX_SORTS[k] + '</button>';
+      }).join('') + '</div>' + LEGEND;
     if (!state.exercises.length) h += '<div class="empty">Noch keine Übungen.</div>';
-    byGroup(state.exercises).forEach(function (g) {
+    var counts = {};
+    state.logs.forEach(function (l) { if (validSets(l).length) counts[l.exId] = (counts[l.exId] || 0) + 1; });
+    exerciseSections(counts).forEach(function (g) {
       h += '<div class="group-h" style="margin-top:14px">' + g.name + '</div>';
       g.items.forEach(function (e) {
-        var n = state.logs.filter(function (l) { return l.exId === e.id && validSets(l).length; }).length;
+        var n = counts[e.id] || 0;
         h += '<div class="list-item" data-ex="' + e.id + '">' + figure(e, 92) +
           '<div class="grow"><div>' + esc(e.name) + '</div>' +
           (EQ[e.eq] ? '<div style="margin:2px 0 3px -6px">' + badge(e) + '</div>' : '') +
@@ -1160,6 +1166,22 @@
     drawChart(pts, { label: 'Körpergewicht', unit: 'kg' });
   }
 
+  // Sortierung der Übungsliste (pro Gerät gemerkt)
+  var EX_SORTS = { group: 'Muskelgruppe', az: 'A–Z', count: 'Meiste Trainings' };
+  var exSort = 'group';
+  try { exSort = EX_SORTS[localStorage.getItem('trainingstagebuch.exsort')] ? localStorage.getItem('trainingstagebuch.exsort') : 'group'; } catch (e) {}
+  function exerciseSections(counts) {
+    if (exSort === 'group') return byGroup(state.exercises);
+    var byName = function (a, b) { return a.name.localeCompare(b.name, 'de'); };
+    var cmp = exSort === 'az' ? byName : function (a, b) {
+      return (counts[b.id] || 0) - (counts[a.id] || 0) || byName(a, b);
+    };
+    var favs = state.exercises.filter(function (e) { return e.fav; }).sort(cmp);
+    var rest = state.exercises.filter(function (e) { return !e.fav; }).sort(cmp);
+    return [{ name: '★ Favoriten', items: favs }, { name: favs.length ? 'Alle anderen' : 'Alle Übungen', items: rest }]
+      .filter(function (g) { return g.items.length; });
+  }
+
   function addExercise(name, muscle, eq) {
     name = name.trim();
     if (!name) return null;
@@ -1252,6 +1274,11 @@
       state.backupSnooze = iso(later);
     } else if (act === 'import') {
       document.getElementById('import-file').click();
+      return;
+    } else if (act === 'ex-sort') {
+      exSort = b.dataset.s;
+      try { localStorage.setItem('trainingstagebuch.exsort', exSort); } catch (e) {}
+      render();
       return;
     } else if (act === 'sync-connect') {
       connectSync(document.getElementById('sync-token').value);

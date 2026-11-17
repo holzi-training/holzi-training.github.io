@@ -280,6 +280,7 @@
     ['Frontheben', 'Schultern', 'KH', 'schulter', 'brust'],
     ['Aufrechtes Rudern', 'Schultern', 'LH', 'schulter,trapez', 'bizeps'],
     ['Reverse Butterfly', 'Schultern', 'M', 'schulter_h', 'ruecken_oben,trapez'],
+    ['Reverse Fly (Kurzhantel)', 'Schultern', 'KH', 'schulter_h', 'ruecken_oben,trapez', 'Vorgebeugt, Arme mit leicht gebeugten Ellbogen seitlich nach oben führen. An der Maschine heißt die Übung Reverse Butterfly.'],
     ['Face Pulls', 'Schultern', 'K', 'schulter_h,ruecken_oben', 'trapez'],
 
     ['Bizepscurls (Langhantel)', 'Arme', 'LH', 'bizeps', 'unterarm', 'Beide Arme gemeinsam – mehr Gewicht möglich.'],
@@ -294,6 +295,7 @@
     ['Enges Bankdrücken', 'Arme', 'LH', 'trizeps', 'brust,schulter'],
     ['Kickbacks', 'Arme', 'KH', 'trizeps', ''],
     ['Unterarmcurls', 'Arme', 'KH', 'unterarm', ''],
+    ['Unterarmcurls mit Fingerrollen', 'Arme', 'LH', 'unterarm', '', 'Die Stange bis in die Fingerspitzen abrollen lassen, mit den Fingern wieder einrollen und dann das Handgelenk beugen. Trainiert zusätzlich die Griffkraft.'],
 
     ['Kniebeugen', 'Beine', 'LH', 'quads,gesaess', 'beinbeuger,adduktoren,ruecken_unten'],
     ['Frontkniebeugen', 'Beine', 'LH', 'quads', 'gesaess,bauch'],
@@ -360,6 +362,22 @@
       });
       s.catalog = 2;
     }
+    // Später ergänzte Übungen: nur diese hinzufügen, damit gelöschte oder umbenannte
+    // Übungen nicht zurückkommen. Neue Einträge landen direkt hinter ihrem Vorgänger im Katalog.
+    var ADDED = [[3, ['Reverse Fly (Kurzhantel)', 'Unterarmcurls mit Fingerrollen']]];
+    ADDED.forEach(function (step) {
+      if (s.catalog >= step[0]) return;
+      step[1].forEach(function (name) {
+        var lower = name.toLowerCase();
+        if (s.exercises.some(function (e) { return e.name.toLowerCase() === lower; })) return;
+        var i = CATALOG.findIndex(function (c) { return c[0] === name; });
+        var c = CATALOG[i], prev = i > 0 ? CATALOG[i - 1][0].toLowerCase() : '';
+        var ex = { id: uid(), name: c[0], group: c[1], eq: c[2], p: split(c[3]), s: split(c[4]), note: c[5] || '', order: i };
+        var at = s.exercises.findIndex(function (e) { return e.name.toLowerCase() === prev; });
+        if (at >= 0) s.exercises.splice(at + 1, 0, ex); else s.exercises.push(ex);
+      });
+      s.catalog = step[0];
+    });
     return s;
   }
   function load() {
@@ -368,7 +386,11 @@
     if (!s || !Array.isArray(s.exercises) || !Array.isArray(s.logs)) {
       s = { exercises: [], logs: [] };   // logs: { id, date, exId, sets: [{ w, r }] }
     }
-    return normalize(s);
+    var before = s.catalog;
+    normalize(s);
+    // Neu angelegte Katalog-Übungen sofort speichern, damit ihre IDs stabil bleiben
+    if (s.catalog !== before) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
+    return s;
   }
   // Speichert lokal; merkt sich, welche Einträge sich geändert haben (für den Abgleich)
   // und stößt danach den Abgleich mit den eigenen Geräten an.
